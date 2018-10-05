@@ -8,10 +8,12 @@
     using ContosoUniversityCore.Features.Instructor;
     using Domain;
     using Shouldly;
+    using Xunit;
     using static SliceFixture;
 
-    public class CreateEditTests
+    public class CreateEditTests : IntegrationTestBase
     {
+        [Fact]
         public async Task Should_create_new_instructor()
         {
             var englishDept = new Department
@@ -24,14 +26,14 @@
                 Department = englishDept,
                 Title = "English 101",
                 Credits = 4,
-                Id = 123
+                Id = NextCourseNumber()
             };
             var english201 = new Course
             {
                 Department = englishDept,
                 Title = "English 201",
                 Credits = 4,
-                Id = 456
+                Id = NextCourseNumber()
             };
 
             await InsertAsync(englishDept, english101, english201);
@@ -45,9 +47,9 @@
                 SelectedCourses = new [] {english101.Id.ToString(), english201.Id.ToString()}
             };
 
-            await SendAsync(command);
+            var id = await SendAsync(command);
 
-            var created = await ExecuteDbContextAsync(db => db.Instructors.Include(i => i.CourseInstructors).Include(i => i.OfficeAssignment).SingleOrDefaultAsync());
+            var created = await ExecuteDbContextAsync(db => db.Instructors.Where(i => i.Id == id).Include(i => i.CourseInstructors).Include(i => i.OfficeAssignment).SingleOrDefaultAsync());
 
             created.FirstMidName.ShouldBe(command.FirstMidName);
             created.LastName.ShouldBe(command.LastName);
@@ -57,6 +59,7 @@
             created.CourseInstructors.Count.ShouldBe(2);
         }
 
+        [Fact]
         public async Task Should_edit_instructor_details()
         {
             var englishDept = new Department
@@ -69,14 +72,14 @@
                 Department = englishDept,
                 Title = "English 101",
                 Credits = 4,
-                Id = 123
+                Id = NextCourseNumber()
             };
             var english201 = new Course
             {
                 Department = englishDept,
                 Title = "English 201",
                 Credits = 4,
-                Id = 456
+                Id = NextCourseNumber()
             };
 
             await InsertAsync(englishDept, english101, english201);
@@ -110,6 +113,7 @@
             edited.OfficeAssignment.Location.ShouldBe(command.OfficeAssignmentLocation);
         }
 
+        [Fact]
         public async Task Should_merge_course_instructors()
         {
             var englishDept = new Department
@@ -122,14 +126,14 @@
                 Department = englishDept,
                 Title = "English 101",
                 Credits = 4,
-                Id = 123
+                Id = NextCourseNumber()
             };
             var english201 = new Course
             {
                 Department = englishDept,
                 Title = "English 201",
                 Credits = 4,
-                Id = 456
+                Id = NextCourseNumber()
             };
             await InsertAsync(englishDept, english101, english201);
 

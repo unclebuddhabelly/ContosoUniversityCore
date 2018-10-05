@@ -7,10 +7,12 @@
     using ContosoUniversityCore.Features.Course;
     using Domain;
     using Shouldly;
+    using Xunit;
     using static SliceFixture;
 
-    public class CreateTests
+    public class CreateTests : IntegrationTestBase
     {
+        [Fact]
         public async Task Should_create_new_course()
         {
             var adminId = await SendAsync(new ContosoUniversityCore.Features.Instructor.CreateEdit.Command
@@ -35,7 +37,7 @@
             {
                 Credits = 4,
                 Department = dept,
-                Number = 1234,
+                Number = NextCourseNumber(),
                 Title = "English 101"
             };
             await SendAsync(command);

@@ -7,10 +7,12 @@
     using ContosoUniversityCore.Features.Course;
     using Domain;
     using Shouldly;
+    using Xunit;
     using static SliceFixture;
 
-    public class DeleteTests
+    public class DeleteTests : IntegrationTestBase
     {
+        [Fact]
         public async Task Should_query_for_command()
         {
             var adminId = await SendAsync(new ContosoUniversityCore.Features.Instructor.CreateEdit.Command
@@ -33,7 +35,7 @@
             {
                 Credits = 4,
                 Department = dept,
-                Id = 1234,
+                Id = NextCourseNumber(),
                 Title = "English 101"
             };
 
@@ -47,6 +49,7 @@
             result.Title.ShouldBe(course.Title);
         }
 
+        [Fact]
         public async Task Should_delete()
         {
             var adminId = await SendAsync(new ContosoUniversityCore.Features.Instructor.CreateEdit.Command
@@ -69,7 +72,7 @@
             {
                 Credits = 4,
                 Department = dept,
-                Id = 1234,
+                Id = NextCourseNumber(),
                 Title = "English 101"
             };
 

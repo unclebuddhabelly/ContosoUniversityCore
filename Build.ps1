@@ -1,29 +1,3 @@
-<#
-.SYNOPSIS
-    You can add this to you build script to ensure that psbuild is available before calling
-    Invoke-MSBuild. If psbuild is not available locally it will be downloaded automatically.
-#>
-function EnsurePsbuildInstalled{
-    [cmdletbinding()]
-    param(
-        [string]$psbuildInstallUri = 'https://raw.githubusercontent.com/ligershark/psbuild/master/src/GetPSBuild.ps1'
-    )
-    process{
-        if(-not (Get-Command "Invoke-MsBuild" -errorAction SilentlyContinue)){
-            'Installing psbuild from [{0}]' -f $psbuildInstallUri | Write-Verbose
-            (new-object Net.WebClient).DownloadString($psbuildInstallUri) | iex
-        }
-        else{
-            'psbuild already loaded, skipping download' | Write-Verbose
-        }
-
-        # make sure it's loaded and throw if not
-        if(-not (Get-Command "Invoke-MsBuild" -errorAction SilentlyContinue)){
-            throw ('Unable to install/load psbuild from [{0}]' -f $psbuildInstallUri)
-        }
-    }
-}
-
 # Taken from psake https://github.com/psake/psake
 
 <#
@@ -50,18 +24,47 @@ function Exec
 
 if(Test-Path .\artifacts) { Remove-Item .\artifacts -Force -Recurse }
 
-EnsurePsbuildInstalled
+
+$branch = @{ $true = $env:APPVEYOR_REPO_BRANCH; $false = $(git symbolic-ref --short -q HEAD) }[$env:APPVEYOR_REPO_BRANCH -ne $NULL];
+$revision = @{ $true = "{0:00000}" -f [convert]::ToInt32("0" + $env:APPVEYOR_BUILD_NUMBER, 10); $false = "local" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
+$suffix = @{ $true = ""; $false = "$($branch.Substring(0, [math]::Min(10,$branch.Length)))-$revision"}[$branch -eq "master" -and $revision -ne "local"]
+$commitHash = $(git rev-parse --short HEAD)
+$buildSuffix = @{ $true = "$($suffix)-$($commitHash)"; $false = "$($branch)-$($commitHash)" }[$suffix -ne ""]
+
+exec { & .\tools\rh.exe /d=ContosoUniversity /f=src\ContosoUniversityCore\App_Data /s="(LocalDb)\mssqllocaldb" /silent }
+exec { & .\tools\rh.exe /d=ContosoUniversity-Test /f=src\ContosoUniversityCore\App_Data /s="(LocalDb)\mssqllocaldb" /silent /drop }
+exec { & .\tools\rh.exe /d=ContosoUniversity-Test /f=src\ContosoUniversityCore\App_Data /s="(LocalDb)\mssqllocaldb" /silent /simple }
+
 
 exec { & dotnet restore }
 
-Invoke-MSBuild
+exec { & dotnet build -c Release --version-suffix=$buildSuffix }
 
-$revision = @{ $true = $env:APPVEYOR_BUILD_NUMBER; $false = 1 }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
-$revision = "{0:D4}" -f [convert]::ToInt32($revision, 10)
+Push-Location -Path .\test\ContosoUniversityCore.IntegrationTests
 
-exec { & dotnet test .\test\ContosoUniversityCore.UnitTests -c Release }
-exec { & dotnet test .\test\ContosoUniversityCore.IntegrationTests -c Release }
+try {
+	exec { & dotnet xunit -configuration Release -nobuild }
+}
+finally {
+	Pop-Location
+}
 
-exec { & dotnet pack .\src\ContosoUniversityCore -c Release -o .\artifacts --version-suffix=$revision }
+Push-Location -Path .\test\ContosoUniversityCore.UnitTests
+
+try {
+	exec { & dotnet xunit -configuration Release -nobuild }
+}
+finally {
+	Pop-Location
+}
+
+exec { & dotnet publish src/ContosoUniversityCore --output .\..\..\publish --configuration Release }
+
+$octo_revision = @{ $true = $env:APPVEYOR_BUILD_NUMBER; $false = "0" }[$env:APPVEYOR_BUILD_NUMBER -ne $NULL];
+$octo_version = "1.0.$octo_revision"
+
+exec { & .\tools\Octo.exe pack --id ContosoUniversityCore --version $octo_version --basePath publish --outFolder artifacts }
+
+
 
 

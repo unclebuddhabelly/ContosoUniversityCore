@@ -6,10 +6,12 @@
     using ContosoUniversityCore.Features.Instructor;
     using Domain;
     using Shouldly;
+    using Xunit;
     using static SliceFixture;
 
-    public class DetailsTests
+    public class DetailsTests : IntegrationTestBase
     {
+        [Fact]
         public async Task Should_get_instructor_details()
         {
             var englishDept = new Department
@@ -22,7 +24,7 @@
                 Department = englishDept,
                 Title = "English 101",
                 Credits = 4,
-                Id = 123
+                Id = NextCourseNumber()
             };
             await InsertAsync(englishDept, english101);
 

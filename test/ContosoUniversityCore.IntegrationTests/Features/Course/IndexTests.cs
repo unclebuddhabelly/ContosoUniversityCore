@@ -5,10 +5,12 @@
     using ContosoUniversityCore.Features.Course;
     using Domain;
     using Shouldly;
+    using Xunit;
     using static SliceFixture;
 
-    public class IndexTests
+    public class IndexTests : IntegrationTestBase
     {
+        [Fact]
         public async Task Should_return_all_courses()
         {
             var adminId = await SendAsync(new ContosoUniversityCore.Features.Instructor.CreateEdit.Command
@@ -38,14 +40,14 @@
             {
                 Credits = 4,
                 Department = englishDept,
-                Id = 1235,
+                Id = NextCourseNumber(),
                 Title = "English 101"
             };
             var history = new Course
             {
                 Credits = 4,
                 Department = historyDept,
-                Id = 4312,
+                Id = NextCourseNumber(),
                 Title = "History 101"
             };
             await InsertAsync(englishDept, historyDept, english, history);
@@ -53,9 +55,10 @@
             var result = await SendAsync(new Index.Query());
 
             result.ShouldNotBeNull();
-            result.Courses.Count.ShouldBe(2);
+            result.Courses.Count.ShouldBeGreaterThanOrEqualTo(2);
         }
 
+        [Fact]
         public async Task Should_filter_courses()
         {
             var adminId = await SendAsync(new ContosoUniversityCore.Features.Instructor.CreateEdit.Command
@@ -85,14 +88,14 @@
             {
                 Credits = 4,
                 Department = englishDept,
-                Id = 1235,
+                Id = NextCourseNumber(),
                 Title = "English 101"
             };
             var history = new Course
             {
                 Credits = 4,
                 Department = historyDept,
-                Id = 4312,
+                Id = NextCourseNumber(),
                 Title = "History 101"
             };
             await InsertAsync(englishDept, historyDept, english, history);
